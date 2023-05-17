@@ -1,7 +1,6 @@
 from http.server import BaseHTTPRequestHandler
 import urllib.parse
 import requests
-import pandas as pd
 from SPARQLWrapper import SPARQLWrapper, JSON
 
 class handler(BaseHTTPRequestHandler):
@@ -31,7 +30,7 @@ class handler(BaseHTTPRequestHandler):
             # Convert results to a markdown table
             results = data['results']['bindings']
             if results:
-                df = pd.json_normalize(results)
+                df = pd.DataFrame(results)
                 df = df.applymap(lambda x: x['value'] if isinstance(x, dict) else x)
                 markdown_table = df.to_markdown(index=False)
             else:
