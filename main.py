@@ -1,7 +1,8 @@
 from http.server import BaseHTTPRequestHandler
 import urllib.parse
 import requests
-import json
+import pandas as pd
+from SPARQLWrapper import SPARQLWrapper, JSON
 
 class handler(BaseHTTPRequestHandler):
 
@@ -16,38 +17,38 @@ class handler(BaseHTTPRequestHandler):
             self.send_response(400)
             self.send_header('Content-type','text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write('Error: Missing "query" parameter. Please provide a SPARQL query.'.encode('utf-8'))
+            self.wfile.write('Error: Missing "query" parameter. Please provide a valid SPARQL query.'.encode('utf-8'))
             return
 
         # Fetch data from Wikidata
-        response = requests.get(f"https://query.wikidata.org/bigdata/namespace/wdq/sparql?query={urllib.parse.quote(query)}", headers={"Accept": "application/sparql-results+json"})
-        data = response.json()
+        sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
+        sparql.setQuery(query)
+        sparql.setReturnFormat(JSON)
 
-        # Extract the results
-        results = data['results']['bindings']
+        try:
+            data = sparql.query().convert()
 
-        if not results:
-            self.send_response(404)
+            # Convert results to a markdown table
+            results = data['results']['bindings']
+            if results:
+                df = pd.json_normalize(results)
+                df = df.applymap(lambda x: x['value'] if isinstance(x, dict) else x)
+                markdown_table = df.to_markdown(index=False)
+            else:
+                markdown_table = "No results found."
+
+        except Exception as e:
+            # If the query is invalid or another error occurs, send an error message
+            self.send_response(400)
             self.send_header('Content-type','text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write('Error: The query did not return any results.'.encode('utf-8'))
+            self.wfile.write(f'Error: Invalid query or unable to process the request. Details: {str(e)}'.encode('utf-8'))
             return
-
-        # Format the results in markdown as a table
-        # Headers
-        headers = results[0].keys()
-        markdown_results = ["| " + " | ".join(headers) + " |", "| " + " | ".join("---" for _ in headers) + " |"]
-
-        # Rows
-        for result in results:
-            markdown_results.append("| " + " | ".join(result[var]['value'] for var in headers) + " |")
-
-        markdown_results_str = "\n".join(markdown_results)
 
         # Send the response
         self.send_response(200)
         self.send_header('Content-type','text/plain; charset=utf-8')
         self.end_headers()
-        self.wfile.write(markdown_results_str.encode('utf-8'))
+        self.wfile.write(markdown_table.encode('utf-8'))
 
         return
