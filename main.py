@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import urllib.parse
 import requests
-from SPARQLWrapper import SPARQLWrapper, JSON
+import json
 
 class handler(BaseHTTPRequestHandler):
 
@@ -20,23 +20,26 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # Fetch data from Wikidata
-        sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
-        sparql.setQuery(query)
-        sparql.setReturnFormat(JSON)
+        url = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql'
+        headers = {'Accept': 'application/sparql-results+json'}
+        params = {'query': query}
 
         try:
-            data = sparql.query().convert()
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
 
             # Convert results to a markdown table
             results = data['results']['bindings']
             if results:
-                df = pd.DataFrame(results)
-                df = df.applymap(lambda x: x['value'] if isinstance(x, dict) else x)
-                markdown_table = df.to_markdown(index=False)
+                keys = results[0].keys()
+                markdown_table = '| ' + ' | '.join(keys) + ' |\n| ' + ' | '.join(['---']*len(keys)) + ' |\n'
+                for result in results:
+                    markdown_table += '| ' + ' | '.join([result[key]['value'] for key in keys]) + ' |\n'
             else:
                 markdown_table = "No results found."
 
-        except Exception as e:
+        except requests.exceptions.HTTPError as e:
             # If the query is invalid or another error occurs, send an error message
             self.send_response(400)
             self.send_header('Content-type','text/plain; charset=utf-8')
