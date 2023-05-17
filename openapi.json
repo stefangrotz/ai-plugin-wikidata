@@ -1,0 +1,65 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Wikipedia Extracts Retriever",
+    "version": "0.1"
+  },
+  "paths": {
+    "/api": {
+      "get": {
+        "summary": "Fetches the intro text of a Wikipedia page",
+        "operationId": "getWikipediaExtract",
+        "parameters": [
+          {
+            "description": "Title of the Wikipedia page to fetch the intro text from",
+            "required": true,
+            "schema": {
+              "title": "Title",
+              "type": "string",
+              "description": "Title of the Wikipedia page to fetch the intro text from"
+            },
+            "name": "title",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error - Missing title parameter",
+            "content": {
+              "text/plain": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Error - The search did not return a text, most likely the searched page does not exist",
+            "content": {
+              "text/plain": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://ai-plugins-vercel.vercel.app"
+    }
+  ],
+  "tags": [
+    {
+      "name": "wikipedia-retriever",
+      "description": "Fetches the intro text of a Wikipedia page based on the provided title"
+    }
+  ]
+}
