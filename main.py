@@ -25,7 +25,7 @@ class handler(BaseHTTPRequestHandler):
         params = {'query': query}
 
         try:
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -39,6 +39,13 @@ class handler(BaseHTTPRequestHandler):
             else:
                 markdown_table = "No results found."
 
+        except requests.exceptions.Timeout as e:
+            # If the request times out, send an error message
+            self.send_response(408)
+            self.send_header('Content-type','text/plain; charset=utf-8')
+            self.end_headers()
+            self.wfile.write('Error: The request timed out. Please try again later or with a simpler query.'.encode('utf-8'))
+            return
         except requests.exceptions.HTTPError as e:
             # If the query is invalid or another error occurs, send an error message
             self.send_response(400)
